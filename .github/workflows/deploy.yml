@@ -1,0 +1,63 @@
+name: Deploy to cPanel
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install pnpm
+        run: corepack prepare pnpm@9 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        run: pnpm --filter=web build
+
+      - name: Build backend
+        run: pnpm --filter=api build
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.CPANEL_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H api.crm.nahatalawns.com >> ~/.ssh/known_hosts
+
+      - name: Deploy frontend to public_html
+        run: |
+          rsync -avz --delete \
+            apps/web/dist/ \
+            salesnest@api.crm.nahatalawns.com:/home/salesnest/public_html/
+
+      - name: Deploy backend
+        run: |
+          rsync -avz --delete \
+            apps/api/ \
+            salesnest@api.crm.nahatalawns.com:/home/salesnest/public_html/api.crm.nahatalawns.com/
+
+      - name: Install backend dependencies
+        run: |
+          ssh salesnest@api.crm.nahatalawns.com \
+          "cd /home/salesnest/public_html/api.crm.nahatalawns.com && corepack enable && corepack prepare pnpm@9 --activate && pnpm install --prod"
+
+      - name: Restart backend
+        run: |
+          ssh salesnest@api.crm.nahatalawns.com \
+          "cd /home/salesnest/public_html/api.crm.nahatalawns.com && pkill -f 'node.*dist' || true; nohup node dist/index.js > app.log 2>&1 &"

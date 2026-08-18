@@ -28,7 +28,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build frontend
-        run: pnpm --filter=web build
+        run: pnpm --filter=frontend build
 
       - name: Build backend
         run: pnpm --filter=api build
@@ -44,16 +44,16 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no salesnest@69.62.85.170 "echo SSH-OK"
 
-      - name: Deploy frontend to public_html
+      - name: Deploy frontend
         run: |
           rsync -avz --delete \
-            apps/web/dist/ \
+            frontend/dist/ \
             salesnest@69.62.85.170:/home/salesnest/public_html/
 
       - name: Deploy backend
         run: |
           rsync -avz --delete \
-            apps/api/ \
+            backend/ \
             salesnest@69.62.85.170:/home/salesnest/public_html/api.crm.nahatalawns.com/
 
       - name: Install backend dependencies

@@ -38,26 +38,30 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.CPANEL_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H api.crm.nahatalawns.com >> ~/.ssh/known_hosts
+          ssh-keyscan -H 69.62.85.170 >> ~/.ssh/known_hosts
+
+      - name: Test SSH connection
+        run: |
+          ssh -o StrictHostKeyChecking=no salesnest@69.62.85.170 "echo SSH-OK"
 
       - name: Deploy frontend to public_html
         run: |
           rsync -avz --delete \
             apps/web/dist/ \
-            salesnest@api.crm.nahatalawns.com:/home/salesnest/public_html/
+            salesnest@69.62.85.170:/home/salesnest/public_html/
 
       - name: Deploy backend
         run: |
           rsync -avz --delete \
             apps/api/ \
-            salesnest@api.crm.nahatalawns.com:/home/salesnest/public_html/api.crm.nahatalawns.com/
+            salesnest@69.62.85.170:/home/salesnest/public_html/api.crm.nahatalawns.com/
 
       - name: Install backend dependencies
         run: |
-          ssh salesnest@api.crm.nahatalawns.com \
+          ssh salesnest@69.62.85.170 \
           "cd /home/salesnest/public_html/api.crm.nahatalawns.com && corepack enable && corepack prepare pnpm@9 --activate && pnpm install --prod"
 
       - name: Restart backend
         run: |
-          ssh salesnest@api.crm.nahatalawns.com \
+          ssh salesnest@69.62.85.170 \
           "cd /home/salesnest/public_html/api.crm.nahatalawns.com && pkill -f 'node.*dist' || true; nohup node dist/index.js > app.log 2>&1 &"
